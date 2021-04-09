@@ -56,6 +56,18 @@
         } else {
             self.txtShowOutPath.placeholderString = [path stringByAppendingPathComponent:@"chinese.txt"];
         }
+        
+        NSString *lastStr;
+        if (![self isNullOrEmpty:self.txtShowPath.placeholderString]) {
+            NSArray *arr = [self.txtShowPath.placeholderString componentsSeparatedByString:@"/"];
+            lastStr = arr.lastObject;
+        }
+        if (![self isNullOrEmpty:lastStr]) {
+            self.txtShowOutPath.placeholderString = [@"/Users/wx/Documents/GitHub/India_ios_main/V1/国际化文件" stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.txt", lastStr]];
+        } else {
+            self.txtShowOutPath.placeholderString = [@"/Users/wx/Documents/GitHub/India_ios_main/V1/国际化文件" stringByAppendingPathComponent:@"chinese.txt"];
+        }
+        
     }
 }
 
@@ -85,7 +97,7 @@
     NSMutableArray *files = [NSMutableArray arrayWithCapacity:42];
     
     NSString *filename ;
-    NSArray *extension = @[@"m", @"h"];
+    NSArray *extension = @[@"m", @"h", @"xib"];
     while (filename = [direnum nextObject]) {
         for (NSString *ext in extension) {
             if ([[filename pathExtension] isEqualToString:ext]) {
@@ -103,6 +115,9 @@
         NSString *str=[NSString stringWithContentsOfFile:[NSString stringWithFormat:@"%@/%@", home, filename] encoding:NSUTF8StringEncoding error:nil];
         
         NSRegularExpression *regular = [NSRegularExpression regularExpressionWithPattern:@"@\"[^\"]*[\\u4E00-\\u9FA5]+[^\"\\n]*?\"" options:NSRegularExpressionCaseInsensitive error:nil];
+        if ([filename containsString:@"xib"]) {
+            regular = [NSRegularExpression regularExpressionWithPattern:@"[^\"]*[\\u4E00-\\u9FA5]+[^\"\\n]*?" options:NSRegularExpressionCaseInsensitive error:nil];
+        }
         
         NSArray *matches = [regular matchesInString:str
                                             options:0
@@ -118,8 +133,17 @@
             }
             NSRange range = [match range];
             NSString *mStr = [str substringWithRange:range];
-            NSRange isOnlyAt = NSMakeRange(0, 1);
-            mStr = [mStr stringByReplacingCharactersInRange:isOnlyAt withString:@""];
+            //移除log相关字符串
+            NSString *logStr = [str substringWithRange:NSMakeRange(range.location-4, range.length)];
+            if ([logStr containsString:@"Log"]) {
+                continue;
+            }
+//            NSRange isOnlyAt = NSMakeRange(0, 1);
+//            mStr = [mStr stringByReplacingCharactersInRange:isOnlyAt withString:@""];
+            NSLog(@"mStr=== %@", mStr);
+            if ([mStr containsString:@"@"]) {
+                mStr = [mStr substringWithRange:NSMakeRange(2, mStr.length-3)];
+            }
             isHasFileName = YES;
             
             if (self.deleteInOneFile.state) {
@@ -145,12 +169,13 @@
     
     for (NSString *txt in dataMSet) {
         if ([txt containsString:@"/*"] && [txt containsString:@"*/"]) {
-            [dataMstr appendString:txt];
-            [dataMstr appendString:@"\n"];
+//            [dataMstr appendString:txt];
+//            [dataMstr appendString:@"\n"];
             continue;
         }
-        [dataMstr appendString:[[txt stringByAppendingString:@"="] stringByAppendingString:                self.tradition.state ? [[ASConvertor getInstance] s2t:txt] : txt]];
-        [dataMstr appendString:@";"];
+        [dataMstr appendString:txt];
+//        [dataMstr appendString:[[txt stringByAppendingString:@"="] stringByAppendingString:                self.tradition.state ? [[ASConvertor getInstance] s2t:txt] : txt]];
+//        [dataMstr appendString:@";"];
         [dataMstr appendString:@"\n"];
     }
     [dataMstr writeToFile:self.txtShowOutPath.placeholderString atomically:YES encoding:NSUTF8StringEncoding error:nil];
@@ -176,6 +201,29 @@
     [_txtView setFont:[NSFont fontWithName:@"Helvetica" size:12.0]];
     [_txtView setEditable:NO];
     return _txtView;
+}
+
+- (BOOL)isNullOrEmpty:(NSString *)str
+{
+    str = [self toString:str];
+    if ([str isEqual:[NSNull null]] || str==nil) {
+        return YES;
+    }
+    else if(str.length==0)
+    {
+        return YES;
+    }
+    return NO;
+}
+
+- (NSString *)toString:(id)object
+{
+    if (object && ![object isEqual:[NSNull null]] ) {
+        NSString *str = [NSString stringWithFormat:@"%@", object];
+        return str;
+    } else {
+        return @"";
+    }
 }
 
 
